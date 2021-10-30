@@ -98,12 +98,14 @@ app.post("/api/users/:_id/exercises", (req, res) => {
 
 	const { _id } = req.params;
 	const { description } = req.body;
-	const { duration } = req.body;
+	const duration = Number(req.body.duration);
 	var { date } = req.body;
 
 	if (date === "") {
 		date = new Date().toDateString();
 		console.log(date);
+	} else {
+		date = new Date(Date.parse(date)).toDateString();
 	}
 
 	User.findById(_id, (err, user) => {
@@ -132,15 +134,32 @@ app.post("/api/users/:_id/exercises", (req, res) => {
 app.get("/api/users/:_id/logs", (req, res) => {
 	console.log(req.params);
 	const { _id } = req.params;
-	User.findById(_id)
-		.select("_id username count log")
-		.exec((err, user) => {
+	const from = new Date(req.query.from);
+	const to = new Date(req.query.to);
+	const { limit } = req.query;
+
+	if (from != "" || to != "" || limit != "") {
+		User.findById(_id, (err, user) => {
 			if (err) {
 				return console.log(err);
 			}
-			//console.log(users);
+			console.log(user);
+			user = user.log.filter((user) => {
+				return new Date(user.date) >= from && new Date(user.date) <= to;
+			});
 			res.json(user);
 		});
+	} else {
+		User.findById(_id)
+			.select("_id username count log")
+			.exec((err, user) => {
+				if (err) {
+					return console.log(err);
+				}
+				//console.log(users);
+				res.json(user);
+			});
+	}
 });
 
 const listener = app.listen(process.env.PORT || 3000, () => {
