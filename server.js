@@ -16,6 +16,7 @@ const userSchema = new Schema({
 	count: Number,
 	log: [
 		{
+			_id: false,
 			description: String,
 			duration: Number,
 			date: String,
@@ -139,16 +140,32 @@ app.get("/api/users/:_id/logs", (req, res) => {
 	const { limit } = req.query;
 
 	if (from != "" || to != "" || limit != "") {
+		// filter by date as per Url querys
 		User.findById(_id, (err, user) => {
 			if (err) {
 				return console.log(err);
 			}
 			console.log(user);
-			user = user.log.filter((user) => {
+			filteredLog = user.log.filter((user) => {
 				return new Date(user.date) >= from && new Date(user.date) <= to;
 			});
-			res.json(user);
+			console.log(filteredLog.length);
+			//filteredCount = filteredLog.length();
+			res.json({
+				_id: _id,
+				username: user.username,
+				count: filteredLog.length,
+				log: filteredLog,
+			});
 		});
+		// .select("_id username count log")
+		// .exec((err, user) => {
+		// 	if (err) {
+		// 		return console.log(err);
+		// 	}
+		// 	console.log(`this is json ${user}`);
+		// 	res.json(user);
+		// });
 	} else {
 		User.findById(_id)
 			.select("_id username count log")
