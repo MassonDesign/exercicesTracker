@@ -24,28 +24,7 @@ const userSchema = new Schema({
 	],
 });
 
-// const exercicesSchema = new Schema({
-// 	username: String,
-// 	description: String,
-// 	duration: Number,
-// 	date: String,
-// });
-
-// const logSchema = new Schema({
-// 	username: String,
-// 	count: Number,
-// 	log: [
-// 		{
-// 			description: String,
-// 			duration: Number,
-// 			date: String,
-// 		},
-// 	],
-// });
-
 const User = mongoose.model("User", userSchema);
-// const Exercices = mongoose.model("Exercices", exercicesSchema);
-// const Log = mongoose.model("Log", logSchema);
 
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
@@ -94,8 +73,8 @@ app.get("/api/users", (req, res) => {
 });
 
 app.post("/api/users/:_id/exercises", (req, res) => {
-	console.log(req.params);
-	console.log(req.body);
+	//console.log(req.params);
+	//console.log(req.body);
 
 	const { _id } = req.params;
 	const { description } = req.body;
@@ -104,9 +83,28 @@ app.post("/api/users/:_id/exercises", (req, res) => {
 
 	if (date === "") {
 		date = new Date().toDateString();
-		console.log(date);
+		//console.log(date);
+	} else if (isNaN(new Date(date))) {
+		date = new Date().toDateString();
 	} else {
 		date = new Date(Date.parse(date)).toDateString();
+	}
+
+	if (duration === "" && description === "") {
+		res.json({
+			error: "No description and duration entered",
+		});
+	}
+	if (description === "") {
+		res.json({
+			error: "No description entered",
+		});
+	}
+
+	if (duration === "") {
+		res.json({
+			error: "No duration entered",
+		});
 	}
 
 	User.findById(_id, (err, user) => {
@@ -114,14 +112,14 @@ app.post("/api/users/:_id/exercises", (req, res) => {
 			console.log(err);
 		}
 		user.count += 1;
-		console.log(user.count);
+		//console.log(user.count);
 		user.log.push({
 			description: description,
 			duration: duration,
 			date: date,
 		});
 		user.save();
-		console.log(user);
+		//console.log(user);
 		res.json({
 			_id: _id,
 			username: user.username,
@@ -133,24 +131,46 @@ app.post("/api/users/:_id/exercises", (req, res) => {
 });
 
 app.get("/api/users/:_id/logs", (req, res) => {
-	console.log(req.params);
+	//console.log(req.params);
 	const { _id } = req.params;
 	const from = new Date(req.query.from);
 	const to = new Date(req.query.to);
 	const { limit } = req.query;
 
-	if (from != "" || to != "" || limit != "") {
+	if (
+		isNaN(from.getTime()) == false ||
+		isNaN(to.getTime()) == false ||
+		isNaN(limit) == false
+	) {
 		// filter by date as per Url querys
 		User.findById(_id, (err, user) => {
 			if (err) {
 				return console.log(err);
 			}
-			console.log(user);
-			filteredLog = user.log.filter((user) => {
-				return new Date(user.date) >= from && new Date(user.date) <= to;
-			});
-			console.log(filteredLog.length);
-			//filteredCount = filteredLog.length();
+			//console.log(user);
+
+			if (isNaN(from.getTime()) == false && isNaN(to.getTime()) == false) {
+				filteredLog = user.log.filter((user) => {
+					return new Date(user.date) >= from && new Date(user.date) <= to;
+				});
+			}
+
+			if (isNaN(from.getTime()) == false && isNaN(to.getTime())) {
+				filteredLog = user.log.filter((user) => {
+					return new Date(user.date) >= from;
+				});
+			}
+
+			if (isNaN(from.getTime()) && isNaN(to.getTime()) == false) {
+				filteredLog = user.log.filter((user) => {
+					return new Date(user.date) <= to;
+				});
+			}
+
+			if (isNaN(limit) == false) {
+				filteredLog = filteredLog.splice(limit);
+			}
+
 			res.json({
 				_id: _id,
 				username: user.username,
@@ -158,14 +178,6 @@ app.get("/api/users/:_id/logs", (req, res) => {
 				log: filteredLog,
 			});
 		});
-		// .select("_id username count log")
-		// .exec((err, user) => {
-		// 	if (err) {
-		// 		return console.log(err);
-		// 	}
-		// 	console.log(`this is json ${user}`);
-		// 	res.json(user);
-		// });
 	} else {
 		User.findById(_id)
 			.select("_id username count log")
